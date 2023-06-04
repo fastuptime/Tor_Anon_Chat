@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Anonim Chat</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .dark-mode body {
+            background-color: #292929;
+            color: #fff;
+        }
+
+        #chatContainer {
+            height: 400px;
+            overflow-y: scroll;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        .message {
+            margin-bottom: 10px;
+        }
+
+        .message .username {
+            font-weight: bold;
+        }
+
+        .message .timestamp {
+            font-size: 12px;
+            color: #999;
+        }
+
+        .notification {
+            text-align: center;
+            color: #999;
+        }
+
+        #chatForm {
+            margin-top: 20px;
+        }
+
+        .dark-mode #chatContainer {
+            background-color: #292929;
+            border-color: #666;
+            color: #fff;
+        }
+
+        .dark-mode .message .username {
+            color: #8ac6ff;
+        }
+
+        .dark-mode .message .timestamp {
+            color: #ccc;
+        }
+
+        .dark-mode .notification {
+            color: #ccc;
+        }
+
+        .dark-mode input,
+        .dark-mode .btn-primary {
+            background-color: #333;
+            color: #fff;
+            border-color: #666;
+        }
+
+        .dark-mode ::placeholder {
+            color: #ccc;
+        }
+
+        .dark-mode #chatForm .input-group-append button {
+            background-color: #444;
+            border-color: #666;
+        }
+
+        .dark-mode .fa-moon {
+            display: none;
+        }
+
+        .dark-mode .fa-sun {
+            display: inline-block;
+        }
+
+        .light-mode .fa-moon {
+            display: inline-block;
+        }
+
+        .light-mode .fa-sun {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4 text-center">Anonim Chat</h1>
+        <div id="chatContainer">
+            <ul id="messages" class="list-unstyled"></ul>
+        </div>
+        <form id="chatForm" class="form-inline mt-4">
+            <div class="input-group w-100">
+                <input id="message" class="form-control" autocomplete="off" placeholder="Mesajınızı girin">
+                <div class="input-group-append">
+                    <button type="submit" class="btn btn-primary">Gönder <i class="fas fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </form>
+        <div class="text-center mt-3">
+            <i class="fas fa-moon" onclick="toggleDarkMode()"></i>
+            <i class="fas fa-sun" onclick="toggleDarkMode()"></i>
+        </div>
+    </div>
+
+    <footer class="text-center mt-5">
+        <p>Github: <a href="https://github.com/fastuptime" target="_blank">fastuptime &#9829;</a></p>
+    </footer>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const notificationSound = new Audio('/bildirim.mp3');
+        $(function () {
+            var socket = io();
+
+            var username = prompt('Kullanıcı adınızı girin:');
+            socket.emit('set username', username);
+
+            socket.on('chat history', function (history) {
+                for (var i = 0; i < history.length; i++) {
+                    displayMessage(history[i]);
+                }
+            });
+
+            socket.on('chat message', function (data) {
+                if (data.username !== username) {
+                    notificationSound.play();
+                }
+                displayMessage(data);
+            });
+
+            socket.on('user joined', function (username) {
+                displayNotification(username + ' sohbete katıldı.');
+            });
+
+            socket.on('user left', function (username) {
+                displayNotification(username + ' sohbetten ayrıldı.');
+            });
+
+            socket.on('username error', function () {
+                var username = prompt('Bu kullanıcı adı zaten kullanılıyor. Başka bir kullanıcı adı girin:');
+                socket.emit('set username', username);
+            });
+
+            $('#chatForm').submit(function (e) {
+                e.preventDefault();
+
+                var message = $('#message').val();
+                if (message) {
+                    socket.emit('chat message', message);
+                    $('#message').val('');
+                }
+            });
+
+            function displayMessage(data) {
+                var message = '<div class="message"><span class="username">' + data.username + '</span> (' + data.timestamp + '): ' + data.message + '</div>';
+                $('#messages').append(message);
+
+                // Sohbet ekranını aşağı kaydır
+                scrollToBottom();
+            }
+
+            function displayNotification(message) {
+                var notification = '<div class="notification">' + message + '</div>';
+                $('#messages').append(notification);
+
+                // Sohbet ekranını aşağı kaydır
+                scrollToBottom();
+            }
+
+            function scrollToBottom() {
+                var chatContainer = document.getElementById('chatContainer');
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+        });
+        
+        function toggleDarkMode() {
+            $('body').toggleClass('dark-mode');
+            $('#chatContainer').toggleClass('dark-mode');
+            $('.message .username').toggleClass('dark-mode');
+            $('.message .timestamp').toggleClass('dark-mode');
+            $('.notification').toggleClass('dark-mode');
+            $('input, .btn-primary').toggleClass('dark-mode');
+            $('::placeholder').toggleClass('dark-mode');
+            $('#chatForm .input-group-append button').toggleClass('dark-mode');
+
+
+            if ($('body').hasClass('dark-mode')) {
+                $('.fa-moon').hide();
+                $('.fa-sun').show();
+            } else {
+                $('.fa-moon').show();
+                $('.fa-sun').hide();
+            }
+        }
+
+        $('.fa-moon').click(function () {
+            toggleDarkMode();
+        });
+    </script>
+</body>
+
+</html>
